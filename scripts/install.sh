@@ -1,15 +1,22 @@
 #!/bin/bash
 
-# Get the absolute path of the gemini-mcp-rs binary
-# if current os is Darwin, use $(pwd)/gemini-mcp-rs
-if [ "$(uname)" == "Darwin" ]; then
-    GEMINI_MCP_RS_PATH=$(pwd)/gemini-mcp-rs
+# check the first argument is the path to the gemini-mcp-rs binary
+if [ -n "$1" ]; then
+    GEMINI_MCP_RS_PATH="$1"
 fi
-if [ ! -f "$GEMINI_MCP_RS_PATH" ]; then
-    GEMINI_MCP_RS_PATH=$(pwd)/target/release/gemini-mcp-rs
+
+if [ -z "$GEMINI_MCP_RS_PATH" ]; then
+    # Get the absolute path of the gemini-mcp-rs binary
+    # if current os is Darwin, use $(pwd)/gemini-mcp-rs
+    if [ "$(uname)" == "Darwin" ]; then
+        GEMINI_MCP_RS_PATH=$(pwd)/gemini-mcp-rs
+    fi
     if [ ! -f "$GEMINI_MCP_RS_PATH" ]; then
-        echo "Error: gemini-mcp-rs binary not found"
-        exit 1
+        GEMINI_MCP_RS_PATH=$(pwd)/target/release/gemini-mcp-rs
+        if [ ! -f "$GEMINI_MCP_RS_PATH" ]; then
+            echo "Error: gemini-mcp-rs binary not found"
+            exit 1
+        fi
     fi
 fi
 
