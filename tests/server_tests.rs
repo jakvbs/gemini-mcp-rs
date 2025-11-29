@@ -4,7 +4,7 @@ use rmcp::{model::*, ServerHandler};
 #[test]
 fn test_server_creation() {
     let _server = GeminiServer::new();
-    assert!(true); // Server created successfully
+    // Test passes if server creation doesn't panic
 }
 
 #[test]
