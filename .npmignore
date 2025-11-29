@@ -1,0 +1,7 @@
+# Only include necessary files in npm package
+*
+!bin.js
+!install.js
+!package.json
+!README.md
+
