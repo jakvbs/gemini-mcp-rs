@@ -14,6 +14,7 @@ mod tests {
             session_id: None,
             return_all_messages: false,
             model: None,
+            timeout_secs: None,
         };
 
         // This test requires a real Gemini CLI installation
@@ -30,6 +31,7 @@ mod tests {
             session_id: Some("session-123".to_string()),
             return_all_messages: true,
             model: Some("gemini-pro".to_string()),
+            timeout_secs: Some(300),
         };
 
         assert_eq!(opts.prompt, "test");
@@ -37,5 +39,6 @@ mod tests {
         assert_eq!(opts.session_id, Some("session-123".to_string()));
         assert!(opts.return_all_messages);
         assert_eq!(opts.model, Some("gemini-pro".to_string()));
+        assert_eq!(opts.timeout_secs, Some(300));
     }
 }

@@ -4,9 +4,7 @@ use rmcp::{
     model::*,
     schemars, tool, tool_handler, tool_router, ErrorData as McpError, ServerHandler,
 };
-use serde::{Deserialize, Serialize};
-use serde_json::Value;
-use std::collections::HashMap;
+use serde::Deserialize;
 
 /// Input parameters for gemini tool
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
@@ -17,28 +15,18 @@ pub struct GeminiArgs {
     /// Run in sandbox mode. Defaults to `False`
     #[serde(default)]
     pub sandbox: bool,
-    /// Resume the specified session of the gemini. Defaults to empty string, start a new session
+    /// Resume the specified session of the gemini. If not provided or empty, starts a new session
     #[serde(rename = "SESSION_ID", default)]
     pub session_id: Option<String>,
     /// Return all messages (e.g. reasoning, tool calls, etc.) from the gemini session. Set to `False` by default, only the agent's final reply message is returned
     #[serde(default)]
     pub return_all_messages: bool,
-    /// The model to use for the gemini session. This parameter is strictly prohibited unless explicitly specified by the user
+    /// The model to use for the gemini session. If not specified, uses the default model configured in Gemini CLI
     #[serde(default)]
     pub model: Option<String>,
-}
-
-/// Output from the gemini tool
-#[derive(Debug, Serialize, schemars::JsonSchema)]
-struct GeminiOutput {
-    success: bool,
-    #[serde(rename = "SESSION_ID")]
-    session_id: String,
-    agent_messages: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    all_messages: Option<Vec<HashMap<String, Value>>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    error: Option<String>,
+    /// Timeout in seconds for gemini execution. Default: 600 (10 minutes)
+    #[serde(default)]
+    pub timeout_secs: Option<u64>,
 }
 
 #[derive(Clone)]
@@ -75,7 +63,6 @@ impl GeminiServer {
     /// - Always capture and reuse `SESSION_ID` for multi-turn interactions
     /// - Enable `sandbox` mode when file modifications should be isolated
     /// - Use `return_all_messages` only when detailed execution traces are necessary (increases payload size)
-    /// - Only pass `model` when the user has explicitly requested a specific model
     #[tool(
         name = "gemini",
         description = "Invokes the Gemini CLI to execute AI-driven tasks, returning structured JSON events and a session identifier for conversation continuity."
@@ -85,9 +72,9 @@ impl GeminiServer {
         Parameters(args): Parameters<GeminiArgs>,
     ) -> Result<CallToolResult, McpError> {
         // Validate required parameters
-        if args.prompt.is_empty() {
+        if args.prompt.trim().is_empty() {
             return Err(McpError::invalid_params(
-                "PROMPT is required and must be a non-empty string",
+                "PROMPT is required and must be a non-empty, non-whitespace string",
                 None,
             ));
         }
@@ -96,6 +83,16 @@ impl GeminiServer {
             if model.is_empty() {
                 return Err(McpError::invalid_params(
                     "Model overrides must be explicitly requested as a non-empty string",
+                    None,
+                ));
+            }
+        }
+
+        // Validate timeout_secs if provided
+        if let Some(timeout) = args.timeout_secs {
+            if timeout == 0 || timeout > 3600 {
+                return Err(McpError::invalid_params(
+                    "timeout_secs must be between 1 and 3600 seconds (1 hour)",
                     None,
                 ));
             }
@@ -114,6 +111,7 @@ impl GeminiServer {
             session_id,
             return_all_messages: args.return_all_messages,
             model,
+            timeout_secs: args.timeout_secs,
         };
 
         // Execute gemini
@@ -129,25 +127,36 @@ impl GeminiServer {
 
         // Prepare the response
         if result.success {
-            let output = GeminiOutput {
-                success: true,
-                session_id: result.session_id,
-                agent_messages: result.agent_messages,
-                all_messages: if args.return_all_messages {
-                    Some(result.all_messages)
-                } else {
-                    None
-                },
-                error: None,
-            };
+            let mut response_text = format!(
+                "success: true\nSESSION_ID: {}\nagent_messages: {}",
+                result.session_id, result.agent_messages
+            );
 
-            let json_output = serde_json::to_string(&output).map_err(|e| {
-                McpError::internal_error(format!("Failed to serialize output: {}", e), None)
-            })?;
+            if args.return_all_messages && !result.all_messages.is_empty() {
+                response_text.push_str(&format!(
+                    "\nall_messages: {} events captured",
+                    result.all_messages.len()
+                ));
+                if let Ok(json) = serde_json::to_string_pretty(&result.all_messages) {
+                    response_text.push_str(&format!("\n\nFull event log:\n{}", json));
+                }
+            }
 
-            Ok(CallToolResult::success(vec![Content::text(json_output)]))
+            Ok(CallToolResult::success(vec![Content::text(response_text)]))
         } else {
-            let error_msg = result.error.unwrap_or_else(|| "Unknown error".to_string());
+            let mut error_msg = result.error.unwrap_or_else(|| "Unknown error".to_string());
+
+            // Include all_messages in error response if requested for debugging
+            if args.return_all_messages && !result.all_messages.is_empty() {
+                error_msg.push_str(&format!(
+                    "\n\nCaptured {} events before failure:",
+                    result.all_messages.len()
+                ));
+                if let Ok(json) = serde_json::to_string_pretty(&result.all_messages) {
+                    error_msg.push_str(&format!("\n{}", json));
+                }
+            }
+
             Err(McpError::internal_error(error_msg, None))
         }
     }
@@ -192,29 +201,15 @@ mod tests {
     }
 
     #[test]
-    fn test_gemini_args_empty_session_id() {
+    fn test_gemini_args_empty_session_id_treated_as_none() {
         let json = r#"{
             "PROMPT": "test prompt",
             "SESSION_ID": ""
         }"#;
 
         let args: GeminiArgs = serde_json::from_str(json).unwrap();
+        // Empty session_id is deserialized as Some(""), but will be filtered to None in the handler
         assert_eq!(args.session_id, Some("".to_string()));
     }
 
-    #[test]
-    fn test_gemini_output_serialization() {
-        let output = GeminiOutput {
-            success: true,
-            session_id: "session-123".to_string(),
-            agent_messages: "Hello, world!".to_string(),
-            all_messages: None,
-            error: None,
-        };
-
-        let json = serde_json::to_string(&output).unwrap();
-        assert!(json.contains("SESSION_ID"));
-        assert!(json.contains("agent_messages"));
-        assert!(!json.contains("all_messages"));
-    }
 }

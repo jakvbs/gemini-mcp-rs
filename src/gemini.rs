@@ -1,9 +1,10 @@
 use anyhow::{Context, Result};
 use serde_json::Value;
-use std::collections::HashMap;
 use std::process::Stdio;
+use std::time::Duration;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
+use tokio::time::timeout;
 
 const PROMPT_DEPRECATION_WARNING: &str = "The --prompt (-p) flag has been deprecated";
 const KEY_SESSION_ID: &str = "session_id";
@@ -14,6 +15,10 @@ const KEY_ERROR: &str = "error";
 const KEY_MESSAGE: &str = "message";
 const TYPE_MESSAGE: &str = "message";
 const ROLE_ASSISTANT: &str = "assistant";
+const DEFAULT_TIMEOUT_SECS: u64 = 600; // 10 minutes
+const MAX_MESSAGES_LIMIT: usize = 10000; // Maximum number of messages to store
+const MAX_NON_JSON_LINES: usize = 1000; // Maximum non-JSON lines to store
+const MAX_STDERR_BYTES: usize = 100_000; // Maximum stderr output to capture (100KB)
 
 #[derive(Debug, Clone)]
 pub struct Options {
@@ -22,6 +27,7 @@ pub struct Options {
     pub session_id: Option<String>,
     pub return_all_messages: bool,
     pub model: Option<String>,
+    pub timeout_secs: Option<u64>,
 }
 
 #[derive(Debug)]
@@ -29,21 +35,9 @@ pub struct GeminiResult {
     pub success: bool,
     pub session_id: String,
     pub agent_messages: String,
-    pub all_messages: Vec<HashMap<String, Value>>,
+    pub all_messages: Vec<Value>,
+    pub return_all_messages: bool,
     pub error: Option<String>,
-}
-
-/// Escape prompt for Windows command line
-fn windows_escape(prompt: &str) -> String {
-    let mut result = prompt.replace('\\', "\\\\");
-    result = result.replace('"', "\\\"");
-    result = result.replace('\n', "\\n");
-    result = result.replace('\r', "\\r");
-    result = result.replace('\t', "\\t");
-    result = result.replace('\x08', "\\b");
-    result = result.replace('\x0c', "\\f");
-    result = result.replace('\'', "\\'");
-    result
 }
 
 /// Process a single JSON line from the gemini CLI output
@@ -52,11 +46,10 @@ fn process_json_line(
     result: &mut GeminiResult,
     return_all_messages: bool,
 ) {
-    // Collect all messages if requested
-    if return_all_messages {
-        if let Ok(map) = serde_json::from_value::<HashMap<String, Value>>(line_data.clone()) {
-            result.all_messages.push(map);
-        }
+    // Collect all messages if requested - store the raw Value to handle objects, arrays, and primitives
+    // Limit the number of messages to prevent memory exhaustion
+    if return_all_messages && result.all_messages.len() < MAX_MESSAGES_LIMIT {
+        result.all_messages.push(line_data.clone());
     }
 
     // Extract session_id
@@ -72,16 +65,23 @@ fn process_json_line(
 
     if item_type == TYPE_MESSAGE && item_role == ROLE_ASSISTANT {
         if let Some(content) = line_data.get(KEY_CONTENT).and_then(|v| v.as_str()) {
-            // Skip deprecation warning
-            if content.contains(PROMPT_DEPRECATION_WARNING) {
+            // Skip if it's just the CLI's own deprecation warning
+            if content == PROMPT_DEPRECATION_WARNING {
                 return;
+            }
+            if !result.agent_messages.is_empty() {
+                result.agent_messages.push('\n');
             }
             result.agent_messages.push_str(content);
         }
     }
 
-    // Check for errors
-    if item_type.contains("fail") || item_type.contains("error") {
+    // Check for errors (case-insensitive) - look for explicit error indicators
+    let item_type_lower = item_type.to_lowercase();
+    let has_explicit_error = item_type_lower.contains("fail") || item_type_lower.contains("error");
+    let has_error_obj = line_data.get(KEY_ERROR).is_some();
+
+    if has_explicit_error || has_error_obj {
         result.success = false;
         if let Some(error_obj) = line_data.get(KEY_ERROR).and_then(|v| v.as_object()) {
             if let Some(msg) = error_obj.get(KEY_MESSAGE).and_then(|v| v.as_str()) {
@@ -99,14 +99,9 @@ fn build_command(opts: &Options) -> Command {
 
     let mut cmd = Command::new(gemini_bin);
     cmd.arg("--prompt");
-
-    // Escape prompt for Windows if needed
-    let prompt = if cfg!(windows) {
-        windows_escape(&opts.prompt)
-    } else {
-        opts.prompt.clone()
-    };
-    cmd.arg(&prompt);
+    // Command::arg() on all platforms already does correct shell quoting,
+    // so we pass the prompt as-is without manual escaping
+    cmd.arg(&opts.prompt);
     cmd.arg("-o");
     cmd.arg("stream-json");
 
@@ -131,11 +126,41 @@ fn build_command(opts: &Options) -> Command {
 
 /// Execute Gemini CLI with the given options and return the result
 pub async fn run(opts: Options) -> Result<GeminiResult> {
-    // Build and spawn the command
+    // Validate options
+    if opts.prompt.trim().is_empty() {
+        return Err(anyhow::anyhow!("Prompt must be a non-empty, non-whitespace string"));
+    }
+
+    if let Some(timeout) = opts.timeout_secs {
+        if timeout == 0 || timeout > 3600 {
+            return Err(anyhow::anyhow!("timeout_secs must be between 1 and 3600 seconds"));
+        }
+    }
+
+    let timeout_duration = Duration::from_secs(opts.timeout_secs.unwrap_or(DEFAULT_TIMEOUT_SECS));
+
+    // Build and spawn the command with kill_on_drop enabled
     let mut cmd = build_command(&opts);
+    cmd.kill_on_drop(true);
     let mut child = cmd.spawn().context("Failed to spawn gemini command")?;
 
-    // Read stdout
+    match timeout(timeout_duration, run_with_child(&mut child, opts.return_all_messages)).await {
+        Ok(result) => result,
+        Err(_) => {
+            // Explicitly kill the child process on timeout to avoid zombies
+            let _ = child.kill().await;
+            let _ = child.wait().await;
+            Err(anyhow::anyhow!("Gemini command timed out after {} seconds", timeout_duration.as_secs()))
+        }
+    }
+}
+
+/// Inner function that reads from a spawned child process
+async fn run_with_child(
+    child: &mut tokio::process::Child,
+    return_all_messages: bool,
+) -> Result<GeminiResult> {
+    // Read stdout and stderr
     let stdout = child.stdout.take().context("Failed to get stdout")?;
     let stderr = child.stderr.take().context("Failed to get stderr")?;
 
@@ -144,6 +169,7 @@ pub async fn run(opts: Options) -> Result<GeminiResult> {
         session_id: String::new(),
         agent_messages: String::new(),
         all_messages: Vec::new(),
+        return_all_messages,
         error: None,
     };
 
@@ -151,7 +177,9 @@ pub async fn run(opts: Options) -> Result<GeminiResult> {
     let mut stdout_reader = BufReader::new(stdout).lines();
     let mut stderr_reader = BufReader::new(stderr).lines();
     let mut stderr_output = String::new();
-    let mut parse_error_seen = false;
+    let mut stderr_truncated = false;
+    let mut non_json_lines = Vec::with_capacity(100); // Start with reasonable capacity
+    let mut valid_json_seen = false;
     let mut stdout_closed = false;
     let mut stderr_closed = false;
     while !stdout_closed || !stderr_closed {
@@ -168,18 +196,21 @@ pub async fn run(opts: Options) -> Result<GeminiResult> {
 
                         // Parse JSON line
                         let line_data: Value = match serde_json::from_str(trimmed) {
-                            Ok(data) => data,
-                            Err(e) => {
-                                if !parse_error_seen {
-                                    record_parse_error(&mut result, &e, trimmed);
-                                    parse_error_seen = true;
+                            Ok(data) => {
+                                valid_json_seen = true;
+                                data
+                            }
+                            Err(_) => {
+                                // Collect non-JSON lines for potential logging (with limit)
+                                if non_json_lines.len() < MAX_NON_JSON_LINES {
+                                    non_json_lines.push(trimmed.to_string());
                                 }
                                 continue;
                             }
                         };
 
                         // Process the parsed JSON line
-                        process_json_line(&line_data, &mut result, opts.return_all_messages);
+                        process_json_line(&line_data, &mut result, return_all_messages);
                     }
                     None => stdout_closed = true,
                 }
@@ -187,10 +218,20 @@ pub async fn run(opts: Options) -> Result<GeminiResult> {
             line = stderr_reader.next_line(), if !stderr_closed => {
                 match line {
                     Ok(Some(line)) => {
-                        if !stderr_output.is_empty() {
-                            stderr_output.push('\n');
+                        // Only capture stderr up to the limit
+                        if stderr_output.len() < MAX_STDERR_BYTES && !stderr_truncated {
+                            if !stderr_output.is_empty() {
+                                stderr_output.push('\n');
+                            }
+                            let remaining = MAX_STDERR_BYTES - stderr_output.len();
+                            if line.len() <= remaining {
+                                stderr_output.push_str(&line);
+                            } else {
+                                stderr_output.push_str(&line[..remaining]);
+                                stderr_output.push_str("\n... (stderr truncated)");
+                                stderr_truncated = true;
+                            }
                         }
-                        stderr_output.push_str(&line);
                     }
                     Ok(None) => stderr_closed = true,
                     Err(e) => {
@@ -216,23 +257,25 @@ pub async fn run(opts: Options) -> Result<GeminiResult> {
             format!("gemini command failed with exit code: {:?}", status.code())
         };
 
+        let mut full_error = error_msg;
         if !stderr_output.is_empty() {
-            result.error = Some(format!("{}\nStderr: {}", error_msg, stderr_output));
-        } else {
-            result.error = Some(error_msg);
+            full_error = format!("{}\nStderr: {}", full_error, stderr_output);
         }
+        // Always include non-JSON output on failure to help with diagnosis
+        if !non_json_lines.is_empty() {
+            full_error = format!("{}\nNon-JSON output: {}", full_error, non_json_lines.join("\n"));
+        }
+        result.error = Some(full_error);
+    } else if !non_json_lines.is_empty() && !valid_json_seen {
+        // Process succeeded but no valid JSON was seen
+        result.success = false;
+        result.error = Some(format!(
+            "No valid JSON output received from gemini CLI.\nOutput: {}",
+            non_json_lines.join("\n")
+        ));
     }
 
     Ok(enforce_required_fields(result))
-}
-
-fn record_parse_error(result: &mut GeminiResult, error: &serde_json::Error, line: &str) {
-    let parse_msg = format!("JSON parse error: {}. Line: {}", error, line);
-    result.success = false;
-    result.error = match result.error.take() {
-        Some(existing) if !existing.is_empty() => Some(format!("{existing}\n{parse_msg}")),
-        _ => Some(parse_msg),
-    };
 }
 
 fn enforce_required_fields(mut result: GeminiResult) -> GeminiResult {
@@ -242,8 +285,11 @@ fn enforce_required_fields(mut result: GeminiResult) -> GeminiResult {
         errors.push("Failed to get `SESSION_ID` from the gemini session.".to_string());
     }
 
-    if result.agent_messages.is_empty() {
+    // Only require agent_messages if return_all_messages is false and all_messages is empty
+    if result.agent_messages.is_empty() && !result.return_all_messages {
         errors.push("Failed to get `agent_messages` from the gemini session.\nYou can try to set `return_all_messages` to `True` to get the full information.".to_string());
+    } else if result.agent_messages.is_empty() && result.return_all_messages && result.all_messages.is_empty() {
+        errors.push("Failed to get any messages from the gemini session.".to_string());
     }
 
     if !errors.is_empty() {
@@ -271,6 +317,7 @@ mod tests {
             session_id: None,
             return_all_messages: false,
             model: None,
+            timeout_secs: None,
         };
 
         assert_eq!(opts.prompt, "test prompt");
@@ -285,6 +332,7 @@ mod tests {
             session_id: Some("test-session-123".to_string()),
             return_all_messages: true,
             model: Some("gemini-pro".to_string()),
+            timeout_secs: Some(300),
         };
 
         assert_eq!(opts.session_id, Some("test-session-123".to_string()));
@@ -294,39 +342,13 @@ mod tests {
     }
 
     #[test]
-    fn test_windows_escape() {
-        let prompt = "Hello\nWorld\t\"Test\"";
-        let escaped = windows_escape(prompt);
-        assert!(escaped.contains("\\n"));
-        assert!(escaped.contains("\\t"));
-        assert!(escaped.contains("\\\""));
-    }
-
-    #[test]
-    fn test_record_parse_error_sets_failure_and_appends_message() {
-        let mut result = GeminiResult {
-            success: true,
-            session_id: "session".to_string(),
-            agent_messages: "ok".to_string(),
-            all_messages: Vec::new(),
-            error: Some("existing".to_string()),
-        };
-
-        let err = serde_json::from_str::<Value>("not-json").unwrap_err();
-        record_parse_error(&mut result, &err, "not-json");
-
-        assert!(!result.success);
-        assert!(result.error.as_ref().unwrap().contains("JSON parse error"));
-        assert!(result.error.as_ref().unwrap().contains("existing"));
-    }
-
-    #[test]
     fn test_enforce_required_fields_requires_session_id() {
         let result = GeminiResult {
             success: true,
             session_id: String::new(),
             agent_messages: "msg".to_string(),
             all_messages: Vec::new(),
+            return_all_messages: false,
             error: None,
         };
 
@@ -341,12 +363,13 @@ mod tests {
     }
 
     #[test]
-    fn test_enforce_required_fields_requires_agent_messages() {
+    fn test_enforce_required_fields_requires_agent_messages_when_not_returning_all() {
         let result = GeminiResult {
             success: true,
             session_id: "session".to_string(),
             agent_messages: String::new(),
             all_messages: Vec::new(),
+            return_all_messages: false,
             error: None,
         };
 
@@ -361,6 +384,23 @@ mod tests {
     }
 
     #[test]
+    fn test_enforce_required_fields_allows_empty_agent_messages_with_all_messages() {
+        let result = GeminiResult {
+            success: true,
+            session_id: "session".to_string(),
+            agent_messages: String::new(),
+            all_messages: vec![serde_json::json!({"type": "tool_use"})],
+            return_all_messages: true,
+            error: None,
+        };
+
+        let updated = enforce_required_fields(result);
+
+        assert!(updated.success);
+        assert!(updated.error.is_none());
+    }
+
+    #[test]
     fn test_build_command_basic() {
         let opts = Options {
             prompt: "test prompt".to_string(),
@@ -368,6 +408,7 @@ mod tests {
             session_id: None,
             return_all_messages: false,
             model: None,
+            timeout_secs: None,
         };
 
         let cmd = build_command(&opts);
@@ -387,6 +428,7 @@ mod tests {
             session_id: Some("session-123".to_string()),
             return_all_messages: true,
             model: Some("gemini-pro".to_string()),
+            timeout_secs: Some(120),
         };
 
         let cmd = build_command(&opts);
@@ -406,6 +448,7 @@ mod tests {
             session_id: Some("abc-123".to_string()),
             return_all_messages: false,
             model: None,
+            timeout_secs: None,
         };
 
         let cmd = build_command(&opts);
