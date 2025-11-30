@@ -1,0 +1,4 @@
+{
+    "additional_args": ["--yolo", "--model", "gemini-3-pro-preview"],
+    "timeout_secs": 3600
+}

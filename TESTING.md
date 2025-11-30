@@ -147,10 +147,8 @@ mod tests {
 async fn test_gemini_execution() {
     let opts = Options {
         prompt: "test".to_string(),
-        sandbox: false,
         session_id: None,
-        return_all_messages: false,
-        model: None,
+        additional_args: Vec::new(),
     };
     
     let result = gemini::run(opts).await;

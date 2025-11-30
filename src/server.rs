@@ -12,21 +12,9 @@ pub struct GeminiArgs {
     /// Instruction for the task to send to gemini
     #[serde(rename = "PROMPT")]
     pub prompt: String,
-    /// Run in sandbox mode. Defaults to `False`
-    #[serde(default)]
-    pub sandbox: bool,
     /// Resume the specified session of the gemini. If not provided or empty, starts a new session
     #[serde(rename = "SESSION_ID", default)]
     pub session_id: Option<String>,
-    /// Return all messages (e.g. reasoning, tool calls, etc.) from the gemini session. Set to `False` by default, only the agent's final reply message is returned
-    #[serde(default)]
-    pub return_all_messages: bool,
-    /// The model to use for the gemini session. If not specified, uses the default model configured in Gemini CLI
-    #[serde(default)]
-    pub model: Option<String>,
-    /// Timeout in seconds for gemini execution. Default: 600 (10 minutes)
-    #[serde(default)]
-    pub timeout_secs: Option<u64>,
 }
 
 #[derive(Clone)]
@@ -56,13 +44,10 @@ impl GeminiServer {
     /// - `success`: boolean indicating execution status
     /// - `SESSION_ID`: unique identifier for resuming this conversation in future calls
     /// - `agent_messages`: concatenated assistant response text
-    /// - `all_messages`: (optional) complete array of JSON events when `return_all_messages=True`
     /// - `error`: error description when `success=False`
     ///
     /// **Best practices:**
     /// - Always capture and reuse `SESSION_ID` for multi-turn interactions
-    /// - Enable `sandbox` mode when file modifications should be isolated
-    /// - Use `return_all_messages` only when detailed execution traces are necessary (increases payload size)
     #[tool(
         name = "gemini",
         description = "Invokes the Gemini CLI to execute AI-driven tasks, returning structured JSON events and a session identifier for conversation continuity."
@@ -79,39 +64,14 @@ impl GeminiServer {
             ));
         }
 
-        if let Some(ref model) = args.model {
-            if model.is_empty() {
-                return Err(McpError::invalid_params(
-                    "Model overrides must be explicitly requested as a non-empty string",
-                    None,
-                ));
-            }
-        }
-
-        // Validate timeout_secs if provided
-        if let Some(timeout) = args.timeout_secs {
-            if timeout == 0 || timeout > 3600 {
-                return Err(McpError::invalid_params(
-                    "timeout_secs must be between 1 and 3600 seconds (1 hour)",
-                    None,
-                ));
-            }
-        }
-
         // Convert empty string session_id to None
         let session_id = args.session_id.filter(|s| !s.is_empty());
-
-        // Convert empty string model to None
-        let model = args.model.filter(|m| !m.is_empty());
 
         // Create options for gemini client
         let opts = Options {
             prompt: args.prompt,
-            sandbox: args.sandbox,
             session_id,
-            return_all_messages: args.return_all_messages,
-            model,
-            timeout_secs: args.timeout_secs,
+            additional_args: gemini::default_additional_args(),
         };
 
         // Execute gemini
@@ -132,30 +92,9 @@ impl GeminiServer {
                 result.session_id, result.agent_messages
             );
 
-            if args.return_all_messages && !result.all_messages.is_empty() {
-                response_text.push_str(&format!(
-                    "\nall_messages: {} events captured",
-                    result.all_messages.len()
-                ));
-                if let Ok(json) = serde_json::to_string_pretty(&result.all_messages) {
-                    response_text.push_str(&format!("\n\nFull event log:\n{}", json));
-                }
-            }
-
             Ok(CallToolResult::success(vec![Content::text(response_text)]))
         } else {
             let mut error_msg = result.error.unwrap_or_else(|| "Unknown error".to_string());
-
-            // Include all_messages in error response if requested for debugging
-            if args.return_all_messages && !result.all_messages.is_empty() {
-                error_msg.push_str(&format!(
-                    "\n\nCaptured {} events before failure:",
-                    result.all_messages.len()
-                ));
-                if let Ok(json) = serde_json::to_string_pretty(&result.all_messages) {
-                    error_msg.push_str(&format!("\n{}", json));
-                }
-            }
 
             Err(McpError::internal_error(error_msg, None))
         }
@@ -186,18 +125,12 @@ mod tests {
     fn test_gemini_args_deserialization() {
         let json = r#"{
             "PROMPT": "test prompt",
-            "sandbox": true,
-            "SESSION_ID": "session-123",
-            "return_all_messages": false,
-            "model": "gemini-pro"
+            "SESSION_ID": "session-123"
         }"#;
 
         let args: GeminiArgs = serde_json::from_str(json).unwrap();
         assert_eq!(args.prompt, "test prompt");
-        assert!(args.sandbox);
         assert_eq!(args.session_id, Some("session-123".to_string()));
-        assert!(!args.return_all_messages);
-        assert_eq!(args.model, Some("gemini-pro".to_string()));
     }
 
     #[test]

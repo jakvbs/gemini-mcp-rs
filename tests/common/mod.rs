@@ -9,10 +9,8 @@ pub fn get_temp_dir() -> std::path::PathBuf {
 pub fn create_test_options(prompt: &str) -> gemini_mcp_rs::gemini::Options {
     gemini_mcp_rs::gemini::Options {
         prompt: prompt.to_string(),
-        sandbox: false,
         session_id: None,
-        return_all_messages: false,
-        model: None,
+        additional_args: Vec::new(),
     }
 }
 
@@ -41,7 +39,6 @@ mod tests {
     fn test_create_test_options() {
         let opts = create_test_options("test prompt");
         assert_eq!(opts.prompt, "test prompt");
-        assert!(!opts.sandbox);
     }
 
     #[test]

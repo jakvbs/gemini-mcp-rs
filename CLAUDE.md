@@ -107,12 +107,12 @@ The project uses:
 
 ## Gemini CLI Integration
 
-This server wraps the `gemini` command. Key flags used:
+This server wraps the `gemini` command. Core flags used:
 - `--prompt <text>` - The task prompt
 - `-o stream-json` - Enables JSON output streaming
-- `--sandbox` - Enables sandbox mode
-- `--model <name>` - Specifies model override
 - `--resume <session_id>` - Continues previous session
+
+Additional Gemini CLI flags (e.g. sandbox mode, model selection) are configured via the server's JSON configuration (`gemini-mcp.config.json`) and injected as `additional_args` into every CLI invocation.
 
 ## Testing Strategy
 

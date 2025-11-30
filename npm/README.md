@@ -57,10 +57,7 @@ You must have the [Gemini CLI](https://github.com/google-gemini/gemini-cli) inst
 The server provides a `gemini` tool with the following parameters:
 
 - **PROMPT** (required): Task instruction
-- **sandbox**: Run in sandbox mode (default: false)
 - **SESSION_ID**: Resume previous session
-- **return_all_messages**: Return full reasoning trace
-- **model**: Override Gemini model
 
 ## Documentation
 

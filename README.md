@@ -114,10 +114,7 @@ The server provides a single `gemini` tool with the following parameters:
 
 ### Optional Parameters
 
-- `sandbox` (bool): Run in sandbox mode. Defaults to `False`
 - `SESSION_ID` (string): Resume the specified session of the gemini. Defaults to empty string, start a new session
-- `return_all_messages` (bool): Return all messages (e.g. reasoning, tool calls, etc.) from the gemini session. Set to `False` by default, only the agent's final reply message is returned
-- `model` (string): The model to use for the gemini session. This parameter is strictly prohibited unless explicitly specified by the user
 
 ### Return Structure
 
@@ -127,16 +124,6 @@ The server provides a single `gemini` tool with the following parameters:
   "success": true,
   "SESSION_ID": "session-uuid",
   "agent_messages": "Gemini's reply content..."
-}
-```
-
-**With return_all_messages enabled:**
-```json
-{
-  "success": true,
-  "SESSION_ID": "session-uuid",
-  "agent_messages": "Gemini's reply content...",
-  "all_messages": [...]
 }
 ```
 
@@ -151,9 +138,7 @@ The server provides a single `gemini` tool with the following parameters:
 ## Best Practices
 
 - Always capture and reuse `SESSION_ID` for multi-turn interactions
-- Enable `sandbox` mode when file modifications should be isolated
-- Use `return_all_messages` only when detailed execution traces are necessary (increases payload size)
-- Only pass `model` when the user has explicitly requested a specific model
+- Configure Gemini CLI flags such as sandbox mode or model selection at the CLI/config level rather than as tool parameters
 
 ## Configuration
 
@@ -169,6 +154,24 @@ The server provides a single `gemini` tool with the following parameters:
   export GEMINI_BIN=/usr/local/bin/gemini-custom
   cargo run
   ```
+
+### JSON Configuration
+
+The server can load additional Gemini CLI arguments and a default timeout from a JSON configuration file. By default it looks for `gemini-mcp.config.json` in the current working directory, or a custom path specified via `GEMINI_MCP_CONFIG_PATH`.
+
+Example:
+
+```json
+{
+  "additional_args": [
+    "--model",
+    "gemini-3-pro-preview"
+  ],
+  "timeout_secs": 600
+}
+```
+
+These `additional_args` are appended to every Gemini CLI invocation after the core flags (`-o stream-json`) and before any `--resume` session flag. The optional `timeout_secs` controls the maximum runtime for each Gemini execution (default 600 seconds, capped at 3600 when set higher).
 
 ## Testing
 

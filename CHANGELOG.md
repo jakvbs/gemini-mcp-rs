@@ -35,7 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Features
 - **Tool**: `gemini` - Invokes the Gemini CLI to execute AI-driven tasks
   - Required parameters: `PROMPT`
-  - Optional parameters: `sandbox`, `SESSION_ID`, `return_all_messages`, `model`
+  - Optional parameters: `SESSION_ID`
 - **Transport**: stdio (standard input/output)
 - **Error handling**: Comprehensive validation and error messages
 - **Performance**: High-performance Rust implementation with low memory footprint

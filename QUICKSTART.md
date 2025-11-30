@@ -106,25 +106,7 @@ SESSION_ID: <previous-session-id>
 
 ## Configuration
 
-### Sandbox Mode
-
-Enable sandbox mode for isolated execution:
-```json
-{
-  "PROMPT": "design a component",
-  "sandbox": true
-}
-```
-
-### Return All Messages
-
-Get detailed execution traces:
-```json
-{
-  "PROMPT": "design a component",
-  "return_all_messages": true
-}
-```
+Additional Gemini CLI flags (for example sandbox mode or model selection) should be configured at the CLI/configuration level rather than as tool parameters. See `README.md` for details on `gemini-mcp.config.json`.
 
 ## Troubleshooting
 
