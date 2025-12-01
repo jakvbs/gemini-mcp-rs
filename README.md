@@ -19,7 +19,7 @@ A high-performance Rust implementation of MCP (Model Context Protocol) server th
 
 ## Prerequisites
 
-- Rust 1.90+ (uses 2025 edition)
+- Rust 1.90+ (uses 2021 edition)
 - [Gemini CLI](https://github.com/google-gemini/gemini-cli) installed and configured
 - Claude Code or another MCP client
 
