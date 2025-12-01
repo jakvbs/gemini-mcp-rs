@@ -12,7 +12,11 @@ pub struct GeminiArgs {
     /// Instruction for the task to send to gemini
     #[serde(rename = "PROMPT")]
     pub prompt: String,
-    /// Resume the specified session of the gemini. If not provided or empty, starts a new session
+    /// Resume a previously started Gemini session. Must be the exact `SESSION_ID`
+    /// string returned by an earlier `gemini` tool call (typically a UUID such as
+    /// `89473362-3f12-46e8-adce-05388980dcca`). If omitted or empty, a new
+    /// session is created. Custom labels like `"skinbase-tradeit-metrics"` are
+    /// not valid session identifiers.
     #[serde(rename = "SESSION_ID", default)]
     pub session_id: Option<String>,
 }
@@ -43,7 +47,7 @@ impl GeminiServer {
     /// **Return structure:**
     /// - `success`: boolean indicating execution status
     /// - `SESSION_ID`: unique identifier for resuming this conversation in future calls
-    /// - `agent_messages`: concatenated assistant response text
+    /// - `message`: concatenated assistant response text
     /// - `error`: error description when `success=False`
     ///
     /// **Best practices:**
@@ -87,8 +91,8 @@ impl GeminiServer {
 
         // Prepare the response
         if result.success {
-            let mut response_text = format!(
-                "success: true\nSESSION_ID: {}\nagent_messages: {}",
+            let response_text = format!(
+                "success: true\nSESSION_ID: {}\nmessage: {}",
                 result.session_id, result.agent_messages
             );
 
