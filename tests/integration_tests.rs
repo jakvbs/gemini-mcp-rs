@@ -46,8 +46,8 @@ mod tests {
     async fn test_gemini_md_config_prepending() {
         // This test verifies that GEMINI.md content is properly read and would be prepended
         // We use the internal read_gemini_config_from_path function for integration testing
-        use tokio::fs;
         use tempfile::TempDir;
+        use tokio::fs;
 
         let temp_dir = TempDir::new().unwrap();
         let config_path = temp_dir.path().join("GEMINI.md");

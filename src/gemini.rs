@@ -61,10 +61,7 @@ pub async fn read_gemini_config_from_path(config_path: &PathBuf) -> Option<Strin
         Err(e) => {
             // Only log if it's not a "file not found" error
             if e.kind() != std::io::ErrorKind::NotFound {
-                eprintln!(
-                    "Warning: Cannot access GEMINI.md configuration file: {}",
-                    e
-                );
+                eprintln!("Warning: Cannot access GEMINI.md configuration file: {}", e);
             }
             return None;
         }
