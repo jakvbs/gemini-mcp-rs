@@ -59,7 +59,8 @@ The server provides a `gemini` tool with the following parameters:
 - **PROMPT** (required): Task instruction
 - **SESSION_ID**: Resume a previously started Gemini session. Use exactly the
   `SESSION_ID` string returned from an earlier `gemini` tool call (typically a
-  UUID); leaving it empty starts a new session.
+  UUID). When starting a new session, omit this field entirely instead of
+  passing an empty string.
 
 ## Documentation
 

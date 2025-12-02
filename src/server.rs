@@ -14,9 +14,12 @@ pub struct GeminiArgs {
     pub prompt: String,
     /// Resume a previously started Gemini session. Must be the exact `SESSION_ID`
     /// string returned by an earlier `gemini` tool call (typically a UUID such as
-    /// `89473362-3f12-46e8-adce-05388980dcca`). If omitted or empty, a new
-    /// session is created. Custom labels like `"skinbase-tradeit-metrics"` are
-    /// not valid session identifiers.
+    /// `89473362-3f12-46e8-adce-05388980dcca`). If omitted, a new session is
+    /// created. Custom labels like `"skinbase-tradeit-metrics"` are not valid
+    /// session identifiers. Clients should never send an empty string value:
+    /// when starting a new session, omit the `SESSION_ID` field entirely instead
+    /// of passing `""`. For backwards compatibility, the server treats an empty
+    /// string as if the field were omitted.
     #[serde(rename = "SESSION_ID", default)]
     pub session_id: Option<String>,
 }

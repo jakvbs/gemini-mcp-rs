@@ -116,9 +116,10 @@ The server provides a single `gemini` tool with the following parameters:
 
 - `SESSION_ID` (string): Resume a previously started Gemini session. Use exactly
   the `SESSION_ID` value returned from an earlier `gemini` tool call (typically
-  a UUID like `89473362-3f12-46e8-adce-05388980dcca`). If omitted or empty, a
-  new session is created. Custom labels (for example `"skinbase-tradeit-metrics"`)
-  are not valid session identifiers.
+  a UUID like `89473362-3f12-46e8-adce-05388980dcca`). If omitted, a new session
+  is created. Custom labels (for example `"skinbase-tradeit-metrics"`) are not
+  valid session identifiers. Never send an empty string value: when starting a
+  new session, omit the `SESSION_ID` field entirely instead of passing `""`.
 
 ### Return Structure
 
