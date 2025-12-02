@@ -57,10 +57,7 @@ echo {"session_id":"test-session","type":"message","role":"assistant","content":
     // Make log path available to the helper script
     env::set_var("GEMINI_ARGS_LOG", log_path.to_str().unwrap());
 
-    let additional = vec![
-        "--model".to_string(),
-        "gemini-3-pro-preview".to_string(),
-    ];
+    let additional = vec!["--model".to_string(), "gemini-3-pro-preview".to_string()];
 
     let opts = Options {
         prompt: "test additional args".to_string(),

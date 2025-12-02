@@ -11,7 +11,7 @@ Thank you for your interest in contributing to gemini-mcp-rs!
 
 2. Clone the repository:
    ```bash
-   git clone https://github.com/missdeer/gemini-mcp-rs.git
+   git clone https://github.com/jakvbs/gemini-mcp-rs.git
    cd gemini-mcp-rs
    ```
 
@@ -73,5 +73,5 @@ See [CLAUDE.md](./CLAUDE.md) for detailed architecture documentation.
 
 ## Questions?
 
-Open an issue on GitHub or contact missdeer
+Open an issue on GitHub or contact jakvbs
 

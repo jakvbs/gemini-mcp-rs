@@ -72,13 +72,13 @@ The `--help` flag provides comprehensive documentation including:
 Install the latest release with a single command:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/missdeer/gemini-mcp-rs/master/scripts/install.sh | bash
+curl -sSL https://raw.githubusercontent.com/jakvbs/gemini-mcp-rs/master/scripts/install.sh | bash
 ```
 
 Or install a specific version:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/missdeer/gemini-mcp-rs/master/scripts/install.sh | bash -s v0.1.0
+curl -sSL https://raw.githubusercontent.com/jakvbs/gemini-mcp-rs/master/scripts/install.sh | bash -s v0.1.0
 ```
 
 This script will:
@@ -90,7 +90,7 @@ This script will:
 ### Option 2: Build from Source
 
 ```bash
-git clone https://github.com/missdeer/gemini-mcp-rs.git
+git clone https://github.com/jakvbs/gemini-mcp-rs.git
 cd gemini-mcp-rs
 cargo build --release
 claude mcp add gemini-rs -s user --transport stdio -- $(pwd)/target/release/gemini-mcp-rs
@@ -215,7 +215,7 @@ The project follows a modular architecture:
 ## Related Projects
 
 - [geminimcp](https://github.com/GuDaStudio/geminimcp) - Original Python implementation
-- [codex-mcp-rs](https://github.com/missdeer/codex-mcp-rs) - Rust MCP server for Codex CLI
+- [codex-mcp-rs](https://github.com/jakvbs/codex-mcp-rs) - Rust MCP server for Codex CLI
 
 ## Contributing
 
@@ -223,7 +223,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-MIT License - Copyright (c) 2025 missdeer
+MIT License - Copyright (c) 2025 jakvbs
 
 See [LICENSE](./LICENSE) for details.
 

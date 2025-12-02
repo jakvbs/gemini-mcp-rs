@@ -3,7 +3,7 @@
 set -euo pipefail
 
 BINARY_NAME="gemini-mcp-rs"
-REPO="missdeer/$BINARY_NAME"
+REPO="jakvbs/$BINARY_NAME"
 INSTALL_DIR="/opt/$BINARY_NAME"
 
 # Detect platform and architecture

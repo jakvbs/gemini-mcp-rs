@@ -1,11 +1,11 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-10-17/server.schema.json",
-  "name": "io.github.missdeer/gemini-mcp-rs",
+  "name": "io.github.jakvbs/gemini-mcp-rs",
   "version": "0.1.2",
   "description": "Rust MCP server wrapping Gemini CLI for stdio-based tool calls. High-performance implementation with async I/O.",
   "packages": [
     {
-      "identifier": "@missdeer/gemini-mcp-rs",
+      "identifier": "@jakvbs/gemini-mcp-rs",
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "transport": {
@@ -16,7 +16,7 @@
   ],
   "repository": {
     "source": "github",
-    "url": "https://github.com/missdeer/gemini-mcp-rs"
+    "url": "https://github.com/jakvbs/gemini-mcp-rs"
   }
 }
 

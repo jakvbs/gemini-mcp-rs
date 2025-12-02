@@ -2,10 +2,10 @@
 name = "gemini-mcp-rs"
 version = "0.1.2"
 edition = "2021"
-authors = ["missdeer"]
+authors = ["jakvbs"]
 description = "MCP server wrapping the Gemini CLI in Rust"
 license = "MIT"
-repository = "https://github.com/missdeer/gemini-mcp-rs"
+repository = "https://github.com/jakvbs/gemini-mcp-rs"
 
 [dependencies]
 rmcp = { git = "https://github.com/modelcontextprotocol/rust-sdk", branch = "main", features = ["server", "transport-io"] }

@@ -106,7 +106,7 @@ When a `v*` tag is pushed:
 4. **MCP registry**: Registers server for discovery in Claude Code
 
 Users can then install via:
-- `npm install -g @missdeer/gemini-mcp-rs`
+- `npm install -g @jakvbs/gemini-mcp-rs`
 - Direct binary download from GitHub releases
 - Building from source with `cargo build --release`
 

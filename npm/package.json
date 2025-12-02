@@ -1,7 +1,7 @@
 {
-  "name": "@missdeer/gemini-mcp-rs",
+  "name": "@jakvbs/gemini-mcp-rs",
   "version": "0.1.2",
-  "mcpName": "io.github.missdeer/gemini-mcp-rs",
+  "mcpName": "io.github.jakvbs/gemini-mcp-rs",
   "description": "NPM wrapper for gemini-mcp-rs - Rust implementation of Gemini MCP server",
   "bin": {
     "gemini-mcp-rs": "bin.js"
@@ -11,14 +11,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/missdeer/gemini-mcp-rs.git"
+    "url": "git+https://github.com/jakvbs/gemini-mcp-rs.git"
   },
-  "author": "missdeer",
+  "author": "jakvbs",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/missdeer/gemini-mcp-rs/issues"
+    "url": "https://github.com/jakvbs/gemini-mcp-rs/issues"
   },
-  "homepage": "https://github.com/missdeer/gemini-mcp-rs#readme",
+  "homepage": "https://github.com/jakvbs/gemini-mcp-rs#readme",
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"

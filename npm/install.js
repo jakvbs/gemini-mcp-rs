@@ -6,7 +6,7 @@ const unzipper = require('unzipper');
 
 const packageJson = require('./package.json');
 const version = packageJson.version;
-const REPO = 'missdeer/gemini-mcp-rs';
+const REPO = 'jakvbs/gemini-mcp-rs';
 
 const platformMap = {
   'darwin': 'Darwin',

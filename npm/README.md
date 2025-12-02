@@ -1,4 +1,4 @@
-# @missdeer/gemini-mcp-rs
+# @jakvbs/gemini-mcp-rs
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![MCP Compatible](https://img.shields.io/badge/MCP-Compatible-green.svg)](https://modelcontextprotocol.io)
@@ -8,7 +8,7 @@ NPM package for **gemini-mcp-rs** - A high-performance Rust implementation of MC
 ## Installation
 
 ```bash
-npm install -g @missdeer/gemini-mcp-rs
+npm install -g @jakvbs/gemini-mcp-rs
 ```
 
 This will automatically download and install the appropriate binary for your platform (Linux, macOS, or Windows).
@@ -64,14 +64,14 @@ The server provides a `gemini` tool with the following parameters:
 
 ## Documentation
 
-For detailed documentation, see the [GitHub repository](https://github.com/missdeer/gemini-mcp-rs).
+For detailed documentation, see the [GitHub repository](https://github.com/jakvbs/gemini-mcp-rs).
 
 ## License
 
-MIT License - Copyright (c) 2025 missdeer
+MIT License - Copyright (c) 2025 jakvbs
 
 ## Related Projects
 
 - [geminimcp](https://github.com/GuDaStudio/geminimcp) - Python implementation
-- [codex-mcp-rs](https://github.com/missdeer/codex-mcp-rs) - Codex CLI MCP server
+- [codex-mcp-rs](https://github.com/jakvbs/codex-mcp-rs) - Codex CLI MCP server
 

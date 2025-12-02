@@ -22,7 +22,7 @@ Get started with gemini-mcp-rs in 5 minutes!
 
 ```bash
 # Install globally
-npm install -g @missdeer/gemini-mcp-rs
+npm install -g @jakvbs/gemini-mcp-rs
 
 # Add to Claude Code
 claude mcp add gemini-rs -s user --transport stdio -- gemini-mcp-rs
@@ -30,7 +30,7 @@ claude mcp add gemini-rs -s user --transport stdio -- gemini-mcp-rs
 
 ### Using Pre-built Binary
 
-1. Download from [releases](https://github.com/missdeer/gemini-mcp-rs/releases)
+1. Download from [releases](https://github.com/jakvbs/gemini-mcp-rs/releases)
 2. Extract the archive
 3. Add to Claude Code:
    ```bash
@@ -41,7 +41,7 @@ claude mcp add gemini-rs -s user --transport stdio -- gemini-mcp-rs
 
 ```bash
 # Clone repository
-git clone https://github.com/missdeer/gemini-mcp-rs.git
+git clone https://github.com/jakvbs/gemini-mcp-rs.git
 cd gemini-mcp-rs
 
 # Build release binary
@@ -114,7 +114,7 @@ Additional Gemini CLI flags (for example sandbox mode or model selection) should
 
 NPM binary not in PATH. Try:
 ```bash
-npm list -g @missdeer/gemini-mcp-rs
+npm list -g @jakvbs/gemini-mcp-rs
 which gemini-mcp-rs
 ```
 
@@ -146,6 +146,6 @@ claude mcp logs gemini-rs
 
 ## Getting Help
 
-- 🐛 [Report bugs](https://github.com/missdeer/gemini-mcp-rs/issues)
-- 💬 [Discussions](https://github.com/missdeer/gemini-mcp-rs/discussions)
+- 🐛 [Report bugs](https://github.com/jakvbs/gemini-mcp-rs/issues)
+- 💬 [Discussions](https://github.com/jakvbs/gemini-mcp-rs/discussions)
 

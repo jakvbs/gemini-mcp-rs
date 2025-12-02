@@ -493,9 +493,7 @@ fn enforce_required_fields(mut result: GeminiResult) -> GeminiResult {
     }
 
     if result.agent_messages.is_empty() {
-        errors.push(
-            "Failed to get `agent_messages` from the gemini session.".to_string(),
-        );
+        errors.push("Failed to get `agent_messages` from the gemini session.".to_string());
     }
 
     if !errors.is_empty() {

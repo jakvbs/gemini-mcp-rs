@@ -101,7 +101,7 @@ impl GeminiServer {
 
             Ok(CallToolResult::success(vec![Content::text(response_text)]))
         } else {
-            let mut error_msg = result.error.unwrap_or_else(|| "Unknown error".to_string());
+            let error_msg = result.error.unwrap_or_else(|| "Unknown error".to_string());
 
             Err(McpError::internal_error(error_msg, None))
         }
