@@ -13,7 +13,7 @@ This document describes the testing strategy and how to run tests for gemini-mcp
 ```
 gemini-mcp-rs/
 ├── src/
-│   ├── gemini.rs         # Contains unit tests for Windows escaping and Options validation
+│   ├── gemini.rs         # Contains unit tests for Options validation
 │   ├── server.rs        # Contains unit tests for server implementation
 │   └── main.rs
 └── tests/
@@ -47,7 +47,7 @@ cargo test --doc
 cargo test --test integration_tests
 
 # Run a specific test by name
-cargo test test_windows_escape
+cargo test test_options_creation
 ```
 
 ### Run Tests with Output
@@ -70,12 +70,10 @@ cargo test --release
 
 ### 1. Unit Tests (src/gemini.rs)
 
-Tests for the `windows_escape` function and Options validation:
+Tests for Options validation and result processing:
 
 - `test_options_creation` - Options struct validation
 - `test_options_with_session` - Options with session ID
-- `test_windows_escape` - Windows string escaping
-- `test_record_parse_error_sets_failure_and_appends_message` - Error handling
 - `test_enforce_required_fields_requires_session_id` - Session ID validation
 - `test_enforce_required_fields_requires_agent_messages` - Agent messages validation
 
@@ -174,7 +172,7 @@ open tarpaulin-report.html
 Tests run automatically on:
 - Every push to main branch
 - Every pull request
-- Multiple platforms (Ubuntu, macOS, Windows)
+- Multiple platforms (Ubuntu, macOS)
 - Multiple Rust versions (stable, beta)
 
 See `.github/workflows/ci.yml` for details.

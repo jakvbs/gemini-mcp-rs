@@ -29,12 +29,6 @@ jobs:
             artifact_name: gemini-mcp-rs
             asset_name: gemini-mcp-rs_Darwin_universal.tar.gz
             build_universal: true
-          # Windows x86_64
-          - target: x86_64-pc-windows-msvc
-            os: windows-latest
-            artifact_name: gemini-mcp-rs.exe
-            asset_name: gemini-mcp-rs_Windows_x86_64.zip
-            build_universal: false
 
     steps:
       - name: Checkout
@@ -67,7 +61,7 @@ jobs:
           strip gemini-mcp-rs
 
       - name: Package (Unix)
-        if: matrix.os != 'windows-latest' && matrix.build_universal != true
+        if: matrix.build_universal != true
         run: |
           cd target/${{ matrix.target }}/release
           strip ${{ matrix.artifact_name }}
@@ -77,13 +71,6 @@ jobs:
         if: matrix.build_universal == true
         run: |
           tar czf ${{ matrix.asset_name }} gemini-mcp-rs
-
-      - name: Package (Windows)
-        if: matrix.os == 'windows-latest'
-        shell: pwsh
-        run: |
-          cd target/${{ matrix.target }}/release
-          Compress-Archive -Path ${{ matrix.artifact_name }} -DestinationPath ../../../${{ matrix.asset_name }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

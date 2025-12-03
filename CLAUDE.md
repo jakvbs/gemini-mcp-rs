@@ -76,7 +76,6 @@ Returns GeminiResult with session_id, agent_messages, all_messages
 
 **gemini.rs:run()** - Core execution function that:
 - Builds the `gemini` command with proper arguments
-- Uses Windows-specific prompt escaping when needed
 - Spawns subprocess with stdin=null, stdout/stderr=piped
 - Streams stdout line-by-line, parsing JSON events
 - Extracts `session_id` (returned as SESSION_ID), `message` items with role="assistant", and error types
@@ -91,8 +90,6 @@ Returns GeminiResult with session_id, agent_messages, all_messages
 - Empty agent_messages (indicates no response from Gemini)
 - Non-zero exit codes from the Gemini subprocess
 - JSON parse errors in streamed output
-
-**Platform Differences**: Windows requires special prompt escaping (backslashes, quotes, newlines) to prevent shell interpretation issues.
 
 **Streaming Output**: The Gemini CLI outputs JSONL (JSON Lines). The server reads line-by-line to handle potentially long-running operations and collect all agent messages incrementally.
 
@@ -117,7 +114,6 @@ Additional Gemini CLI flags (e.g. sandbox mode, model selection) are configured 
 ## Testing Strategy
 
 Unit tests exist for:
-- Windows prompt escaping logic (gemini.rs:windows_escape)
 - Options struct validation (gemini.rs)
 - Server parameter handling (server.rs)
 - JSON parsing and error handling (gemini.rs)
