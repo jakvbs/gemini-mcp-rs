@@ -4,7 +4,18 @@ use rmcp::{
     model::*,
     schemars, tool, tool_handler, tool_router, ErrorData as McpError, ServerHandler,
 };
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
+
+/// Output from the gemini tool
+#[derive(Debug, Serialize)]
+struct GeminiOutput {
+    success: bool,
+    #[serde(rename = "SESSION_ID")]
+    session_id: String,
+    message: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    error: Option<String>,
+}
 
 /// Input parameters for gemini tool
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
@@ -92,19 +103,19 @@ impl GeminiServer {
             }
         };
 
-        // Prepare the response
-        if result.success {
-            let response_text = format!(
-                "success: true\nSESSION_ID: {}\nmessage: {}",
-                result.session_id, result.agent_messages
-            );
+        // Prepare the response using TOON format for token efficiency
+        let output = GeminiOutput {
+            success: result.success,
+            session_id: result.session_id,
+            message: result.agent_messages,
+            error: result.error,
+        };
 
-            Ok(CallToolResult::success(vec![Content::text(response_text)]))
-        } else {
-            let error_msg = result.error.unwrap_or_else(|| "Unknown error".to_string());
+        let toon_output = toon_format::encode_default(&output).map_err(|e| {
+            McpError::internal_error(format!("Failed to serialize output: {}", e), None)
+        })?;
 
-            Err(McpError::internal_error(error_msg, None))
-        }
+        Ok(CallToolResult::success(vec![Content::text(toon_output)]))
     }
 }
 
