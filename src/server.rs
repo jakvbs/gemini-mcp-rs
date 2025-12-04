@@ -71,30 +71,30 @@ impl GeminiServer {
         name = "gemini",
         description = "Invokes the Gemini CLI to execute AI-driven tasks, returning structured JSON events and a session identifier for conversation continuity."
     )]
-	    async fn gemini(
-	        &self,
-	        Parameters(args): Parameters<GeminiArgs>,
-	    ) -> Result<CallToolResult, McpError> {
-	        // Validate required parameters
-	        if args.prompt.trim().is_empty() {
+    async fn gemini(
+        &self,
+        Parameters(args): Parameters<GeminiArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        // Validate required parameters
+        if args.prompt.trim().is_empty() {
             return Err(McpError::invalid_params(
                 "PROMPT is required and must be a non-empty, non-whitespace string",
-	                None,
-	            ));
-	        }
+                None,
+            ));
+        }
 
-	        // Normalize empty string session_id to None so that clients should
-	        // either omit the field or provide a real session id.
-	        let session_id = args.session_id.filter(|s| !s.is_empty());
+        // Normalize empty string session_id to None so that clients should
+        // either omit the field or provide a real session id.
+        let session_id = args.session_id.filter(|s| !s.is_empty());
 
-	        if let Some(ref id) = session_id {
-	            if Uuid::parse_str(id).is_err() {
-	                return Err(McpError::invalid_params(
-	                    "SESSION_ID must be a valid UUID string",
-	                    None,
-	                ));
-	            }
-	        }
+        if let Some(ref id) = session_id {
+            if Uuid::parse_str(id).is_err() {
+                return Err(McpError::invalid_params(
+                    "SESSION_ID must be a valid UUID string",
+                    None,
+                ));
+            }
+        }
 
         // Create options for gemini client
         let opts = Options {
